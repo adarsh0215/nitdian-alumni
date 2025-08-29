@@ -23,7 +23,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 
-/** Sections (unchanged) */
 import IdentitySection from "./sections/IdentitySection";
 import ContactSection from "./sections/ContactSection";
 import AcademicSection from "./sections/AcademicSection";
@@ -32,12 +31,9 @@ import ProfessionalSection from "./sections/ProfessionalSection";
 import InterestsSection from "./sections/InterestsSection";
 import ConsentSection from "./sections/ConsentSection";
 
-/** Props: pass server action + prefill values from the page */
 export type OnboardingFormProps = {
-  /** Server Action from the page: (formData: FormData) => Promise<any> */
   action: (formData: FormData) => void | Promise<void>;
-  /** Prefill from DB (whatever you selected on the page) */
-  defaultValues?: Partial<OnboardingValues>;
+  defaultValues?: Partial<OnboardingValues> | any; // allow branch/department passthrough
 };
 
 export default function OnboardingForm({ action, defaultValues }: OnboardingFormProps) {
@@ -50,15 +46,13 @@ export default function OnboardingForm({ action, defaultValues }: OnboardingForm
     mode: "onChange",
   });
 
-  // If the page loads/changes defaults after mount, sync them into RHF
+  // Sync later-loaded defaults
   React.useEffect(() => {
-    if (defaultValues) {
-      form.reset(toFormDefaults(defaultValues));
-    }
+    if (defaultValues) form.reset(toFormDefaults(defaultValues));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [JSON.stringify(defaultValues)]);
 
-  // Live preview for newly selected avatar file
+  // Live preview for new avatar file (if your IdentitySection sets avatar_file)
   React.useEffect(() => {
     const file = form.getValues("avatar_file") as File | undefined;
     if (!file) return;
@@ -68,11 +62,9 @@ export default function OnboardingForm({ action, defaultValues }: OnboardingForm
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.watch("avatar_file")]);
 
-  /** Validate with zod/RHF. If invalid, stop submit; otherwise let the browser
-   *  submit the form to the Server Action (which handles upload + DB + redirect).
-   */
+  // Let the browser submit to the Server Action only if RHF+zod say valid
   async function handlePreSubmit(e: React.FormEvent<HTMLFormElement>) {
-    const valid = await form.trigger(); // run RHF+zod validators
+    const valid = await form.trigger();
     if (!valid) {
       e.preventDefault();
       toast.error("Please fix the highlighted fields.");
@@ -85,8 +77,7 @@ export default function OnboardingForm({ action, defaultValues }: OnboardingForm
     <Card className="mx-auto w-full max-w-2xl border-0 shadow-none">
       <CardContent>
         <Form {...form}>
-          {/* IMPORTANT: This <form> submits to the Server Action passed via props */}
-          <form action={action} onSubmit={handlePreSubmit} className="space-y-8">
+          <form action={action} onSubmit={handlePreSubmit} noValidate className="space-y-8">
             <IdentitySection
               form={form}
               avatarPreview={avatarPreview}
@@ -94,25 +85,20 @@ export default function OnboardingForm({ action, defaultValues }: OnboardingForm
             />
 
             <Separator />
-
             <ContactSection form={form} COUNTRY_CODES={COUNTRY_CODES} />
 
             <Separator />
-
             <AcademicSection form={form} YEARS={YEARS} DEGREES={DEGREES} BRANCHES={BRANCHES} />
 
             <Separator />
-
             <ProfessionalSection form={form} EMPLOYMENT_TYPES={EMPLOYMENT_TYPES} />
 
             <Separator />
-
             {/* <LinksSection form={form} /> */}
 
             <InterestsSection form={form} INTERESTS={INTERESTS} />
 
             <Separator />
-
             <ConsentSection form={form} />
 
             <div className="flex flex-col-reverse sm:flex-row sm:items-center gap-3 pt-2">

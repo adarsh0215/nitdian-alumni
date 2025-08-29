@@ -1,7 +1,12 @@
 "use client";
 import type { UseFormReturn } from "react-hook-form";
 import {
-  FormField, FormItem, FormLabel, FormControl, FormMessage, FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormControl,
+  FormMessage,
+  FormDescription,
 } from "@/components/ui/form";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
@@ -45,7 +50,7 @@ export default function ConsentSection({ form }: { form: UseFormReturn<Onboardin
                   />
                 </FormControl>
               </FormItem>
-              {/* 👉 ensure value is posted to the server action */}
+              {/* ensure value is posted to the Server Action */}
               <input type="hidden" name="is_public" value={field.value ? "true" : ""} />
             </>
           )}
@@ -77,7 +82,6 @@ export default function ConsentSection({ form }: { form: UseFormReturn<Onboardin
                   <FormMessage />
                 </div>
               </FormItem>
-              {/* 👉 serialize to FormData */}
               <input type="hidden" name="accepted_terms" value={field.value ? "true" : ""} />
             </>
           )}
@@ -109,7 +113,6 @@ export default function ConsentSection({ form }: { form: UseFormReturn<Onboardin
                   <FormMessage />
                 </div>
               </FormItem>
-              {/* 👉 serialize to FormData */}
               <input type="hidden" name="accepted_privacy" value={field.value ? "true" : ""} />
             </>
           )}

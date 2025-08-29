@@ -1,4 +1,3 @@
-// components/onboarding/actions.ts
 "use server";
 
 import { cookies } from "next/headers";
@@ -6,11 +5,23 @@ import { redirect } from "next/navigation";
 import { createServerClient } from "@supabase/ssr";
 
 export async function saveOnboarding(input: {
-  full_name: string; email: string; avatar_url: string | null;
-  phone_e164: string | null; city: string | null; country: string | null;
-  graduation_year: number | null; degree: string | null; department: string | null;
-  employment_type: string | null; company: string | null; designation: string | null;
-  linkedin: string | null; interests: string[]; is_public: boolean; accepted_terms: boolean; accepted_privacy: boolean;
+  full_name: string;
+  email: string;
+  avatar_url: string | null;
+  phone_e164: string | null;
+  city: string | null;
+  country: string | null;
+  graduation_year: number | null;
+  degree: string | null;
+  department: string | null; // DB column (formerly "branch")
+  employment_type: string | null;
+  company: string | null;
+  designation: string | null;
+  linkedin: string | null;
+  interests: string[];
+  is_public: boolean;
+  accepted_terms: boolean;
+  accepted_privacy: boolean;
 }) {
   const cookieStore = await cookies();
 
@@ -19,7 +30,6 @@ export async function saveOnboarding(input: {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        // ✅ Required shape for this @supabase/ssr version
         getAll() {
           return cookieStore.getAll();
         },
@@ -32,7 +42,9 @@ export async function saveOnboarding(input: {
     }
   );
 
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) redirect("/auth/login?redirect=/onboarding");
 
   const { error } = await supabase
@@ -46,20 +58,23 @@ export async function saveOnboarding(input: {
       country: input.country,
       graduation_year: input.graduation_year,
       degree: input.degree,
-      department: input.department,        // make sure this matches your DB column
+      department: input.department, // ✅ write to department
       employment_type: input.employment_type,
       company: input.company,
       designation: input.designation,
       linkedin: input.linkedin,
       interests: input.interests,
       is_public: input.is_public,
-      onboarded: true,                      // flip the flag here
+      onboarded: true,
       accepted_terms: !!input.accepted_terms,
       accepted_privacy: !!input.accepted_privacy,
     })
     .eq("id", user.id);
 
-  if (error) return { ok: false, error: error.message };
+  if (error) {
+    // You can throw to surface a 500, or redirect with a query param if preferred
+    throw new Error(error.message);
+  }
 
   redirect("/dashboard");
 }

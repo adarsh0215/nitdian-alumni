@@ -6,13 +6,7 @@ import { z } from "zod";
  * ------------------------------------- */
 
 // Keep degrees/branches as text in DB, but constrain UI picks for consistency.
-export const DEGREES = [
-  "B.Tech",
-  "M.Tech",
-  "MBA",
-  "PhD",
-  "Other",
-] as const;
+export const DEGREES = ["B.Tech", "M.Tech", "MBA", "PhD", "Other"] as const;
 
 export const BRANCHES = [
   "Biotechnology",
@@ -116,7 +110,7 @@ const COUNTRY_CODES_DESC = [...COUNTRY_CODES].sort(
   (a, b) => b.code.length - a.code.length
 );
 
-/** Years helper (1965 → currentYear + 10) */
+/** Years helper (1965 → currentYear + 5) */
 const NOW = new Date();
 export const YEARS = (() => {
   const max = NOW.getUTCFullYear() + 5;
@@ -196,13 +190,8 @@ const GraduationYear = z
   .number({ invalid_type_error: "Select a graduation year" })
   .refine((y) => YEARS.includes(y), "Select a valid year");
 
-const CountryCode = z
-  .string()
-  .regex(/^\+\d{1,3}$/, "Select a valid country code");
-
-const PhoneNumber = z
-  .string()
-  .regex(/^\d{6,14}$/, "Enter a valid phone number (digits only)");
+const CountryCode = z.string().regex(/^\+\d{1,3}$/, "Select a valid country code");
+const PhoneNumber = z.string().regex(/^\d{6,14}$/, "Enter a valid phone number (digits only)");
 
 /** Onboarding form schema (what your React form works with) */
 export const OnboardingSchema = z
@@ -223,7 +212,7 @@ export const OnboardingSchema = z
     // Academic
     graduation_year: GraduationYear,
     degree: Degree,
-    branch: Branch,
+    branch: Branch, // UI field; DB uses "department"
 
     // Professional
     employment_type: EmploymentType,
@@ -244,16 +233,17 @@ export const OnboardingSchema = z
 
     // Visibility & consent
     is_public: z.boolean().default(true),
-    accepted_terms: z.boolean().refine((v) => v === true, { message: "You must accept the Terms" }),
-    accepted_privacy: z.boolean().refine((v) => v === true, { message: "You must accept the Privacy Policy" }),
+    accepted_terms: z
+      .boolean()
+      .refine((v) => v === true, { message: "You must accept the Terms" }),
+    accepted_privacy: z
+      .boolean()
+      .refine((v) => v === true, { message: "You must accept the Privacy Policy" }),
   })
-  .refine(
-    (vals) => assembleE164(vals.phone_country, vals.phone_number) !== null,
-    {
-      message: "Phone number is invalid",
-      path: ["phone_number"],
-    }
-  );
+  .refine((vals) => assembleE164(vals.phone_country, vals.phone_number) !== null, {
+    message: "Phone number is invalid",
+    path: ["phone_number"],
+  });
 
 export type OnboardingValues = z.infer<typeof OnboardingSchema>;
 
@@ -271,7 +261,9 @@ export type ProfileRow = {
   country: string | null;
   graduation_year: number;
   degree: string;
-  branch: string;
+  // Your DB now stores "department" (renamed from branch)
+  branch?: string;      // old client key (form)
+  department?: string;  // DB column
   employment_type: string;
   company: string | null;
   designation: string | null;
@@ -288,11 +280,17 @@ export type ProfileRow = {
 export function toFormDefaults(existing?: Partial<ProfileRow> | null): OnboardingValues {
   const phone = splitE164(existing?.phone_e164 ?? null);
 
-  // Pick nearest valid year (fallback to current)
+  // If not present, fall back to current year
   const current = NOW.getUTCFullYear();
   const defaultYear = YEARS.includes(existing?.graduation_year as number)
     ? (existing!.graduation_year as number)
-    : Math.min(Math.max(current, 1965), NOW.getUTCFullYear() + 10);
+    : current;
+
+  // Prefer branch; fall back to department
+  const branch =
+    (existing?.branch as (typeof BRANCHES)[number]) ||
+    (existing?.department as (typeof BRANCHES)[number]) ||
+    "Computer Science & Engineering";
 
   return {
     // Identity
@@ -311,7 +309,7 @@ export function toFormDefaults(existing?: Partial<ProfileRow> | null): Onboardin
     // Academic
     graduation_year: defaultYear,
     degree: (existing?.degree as (typeof DEGREES)[number]) ?? "B.Tech",
-    branch: (existing?.branch as (typeof BRANCHES)[number]) ?? "Computer Science & Engineering",
+    branch,
 
     // Professional
     employment_type:
@@ -325,7 +323,7 @@ export function toFormDefaults(existing?: Partial<ProfileRow> | null): Onboardin
     // Interests
     interests: (existing?.interests as (typeof INTERESTS)[number][]) ?? [],
 
-    // Visibility & consent (UI will force true on submit)
+    // Visibility & consent
     is_public: existing?.is_public ?? true,
     accepted_terms: existing?.accepted_terms ?? false,
     accepted_privacy: existing?.accepted_privacy ?? false,
@@ -336,6 +334,7 @@ export function toFormDefaults(existing?: Partial<ProfileRow> | null): Onboardin
  * Convert validated form values → DB upsert payload aligned with `profiles` columns.
  * - Requires `userId` and `email` you trust (from Supabase auth).
  * - Provide an `avatar_url` you computed after uploading (or pass existing).
+ * - Writes to **department** (DB) using the form's **branch**.
  */
 export function valuesToUpsert(
   vals: OnboardingValues,
@@ -354,7 +353,9 @@ export function valuesToUpsert(
 
     graduation_year: vals.graduation_year,
     degree: vals.degree,
-    branch: vals.branch,
+
+    // 🔁 Map branch -> department (DB column)
+    department: vals.branch,
 
     employment_type: vals.employment_type,
     company: vals.company?.trim() || null,
@@ -364,8 +365,8 @@ export function valuesToUpsert(
     interests: vals.interests,
 
     is_public: !!vals.is_public,
-    onboarded: true, // flip on first successful onboarding
-    is_approved: false, // stays false until admin approves
+    onboarded: true,      // flip on first successful onboarding
+    is_approved: false,   // remains false until admin approves
 
     accepted_terms: true,
     accepted_privacy: true,

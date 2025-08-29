@@ -1,4 +1,3 @@
-// app/onboarding/page.tsx
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
@@ -10,6 +9,7 @@ import { assembleE164 } from "@/lib/validation/onboarding";
 
 export const metadata = { title: "Onboarding • AlumniNet" };
 
+// Server Action wrapper: adapts FormData -> object for the real action
 async function saveOnboarding(formData: FormData): Promise<void> {
   "use server";
 
@@ -25,6 +25,9 @@ async function saveOnboarding(formData: FormData): Promise<void> {
     assembleE164(S(formData.get("phone_country")) ?? "", S(formData.get("phone_number")) ?? "") ??
     null;
 
+  // The form uses "branch"; DB column is "department" -> map it here
+  const branch = S(formData.get("branch"));
+
   await saveObjectAction({
     full_name: S(formData.get("full_name")) ?? "",
     email: S(formData.get("email")) ?? "",
@@ -34,15 +37,15 @@ async function saveOnboarding(formData: FormData): Promise<void> {
     country: S(formData.get("country")),
     graduation_year: N(formData.get("graduation_year")),
     degree: S(formData.get("degree")),
-    department: S(formData.get("department")), // or map to `branch` if that's your column
+    department: branch, // ✅ map branch -> department
     employment_type: S(formData.get("employment_type")),
     company: S(formData.get("company")),
     designation: S(formData.get("designation")),
     linkedin: S(formData.get("linkedin")),
     interests: formData.getAll("interests").map(String),
-    is_public: B(formData.get("is_public")),
 
-    // ✅ include consent
+    // booleans
+    is_public: B(formData.get("is_public")),
     accepted_terms: B(formData.get("accepted_terms")),
     accepted_privacy: B(formData.get("accepted_privacy")),
   });
@@ -51,9 +54,13 @@ async function saveOnboarding(formData: FormData): Promise<void> {
 export default async function OnboardingPage() {
   const supabase = await supabaseServer();
 
-  const { data: { user } } = await supabase.auth.getUser();
+  // Require auth
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) redirect("/auth/login?redirect=/onboarding");
 
+  // Prefill (read department from DB)
   const { data: profile } = await supabase
     .from("profiles")
     .select(
@@ -62,6 +69,7 @@ export default async function OnboardingPage() {
     .eq("id", user.id)
     .maybeSingle();
 
+  // Fallback to auth email if row.email is null
   const authEmail =
     user.email ??
     (typeof (user as any)?.user_metadata?.email === "string"
@@ -69,9 +77,11 @@ export default async function OnboardingPage() {
       : "") ??
     "";
 
-  const defaults = {
+  // Pass branch to the form if the row only has department
+  const defaults: any = {
     ...profile,
     email: profile?.email ?? authEmail,
+    branch: (profile as any)?.branch ?? (profile as any)?.department ?? undefined,
     accepted_terms: profile?.accepted_terms ?? false,
     accepted_privacy: profile?.accepted_privacy ?? false,
   };
