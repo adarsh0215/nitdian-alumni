@@ -4,49 +4,46 @@ import type { NextRequest } from "next/server";
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 
 export async function middleware(req: NextRequest) {
-  const res = NextResponse.next();
+  let res = NextResponse.next(); // make it "let" so we can reassign
   const url = new URL(req.url);
   const path = url.pathname;
 
-  // Guarded groups (login required)
   const needsAuth =
     path.startsWith("/dashboard") ||
     path.startsWith("/directory") ||
     path.startsWith("/onboarding");
 
-  // 1) Create Supabase server client with cookie bridge
+  // small helper to keep refreshed cookies when redirecting
+  const redirectWithCookies = (to: string | URL) => {
+    const r = NextResponse.redirect(typeof to === "string" ? new URL(to, url.origin) : to);
+    // forward any cookies Supabase set on `res`
+    for (const c of res.cookies.getAll()) {
+      r.cookies.set(c); // { name, value }
+    }
+    return r;
+  };
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get(name: string) {
-          return req.cookies.get(name)?.value;
-        },
-        set(name: string, value: string, options: CookieOptions) {
-          res.cookies.set(name, value, options);
-        },
-        remove(name: string, options: CookieOptions) {
-          res.cookies.set(name, "", options);
-        },
+        get(name: string) { return req.cookies.get(name)?.value; },
+        set(name: string, value: string, options: CookieOptions) { res.cookies.set(name, value, options); },
+        remove(name: string, options: CookieOptions) { res.cookies.set(name, "", options); },
       },
     }
   );
 
-  // 2) If route needs auth, ensure user exists
   if (needsAuth) {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {
-      // send to login and safely round-trip back
       const login = new URL("/auth/login", url.origin);
       login.searchParams.set("redirect", path);
-      return NextResponse.redirect(login);
+      return redirectWithCookies(login);
     }
 
-    // 3) Fetch profile flags once
     const { data: profile } = await supabase
       .from("profiles")
       .select("onboarded, is_approved")
@@ -56,42 +53,34 @@ export async function middleware(req: NextRequest) {
     const onboarded = !!profile?.onboarded;
     const isApproved = !!profile?.is_approved;
 
-    // 4) Route-specific gates
     if (path.startsWith("/dashboard")) {
-      // Must be onboarded
       if (!onboarded) {
         const to = new URL("/onboarding", url.origin);
         to.searchParams.set("from", "/dashboard");
-        return NextResponse.redirect(to);
+        return redirectWithCookies(to);
       }
     }
 
     if (path.startsWith("/directory")) {
-      // Must be onboarded and approved
       if (!onboarded) {
         const to = new URL("/onboarding", url.origin);
         to.searchParams.set("from", "/directory");
-        return NextResponse.redirect(to);
+        return redirectWithCookies(to);
       }
       if (!isApproved) {
-        // Not yet approved → keep them in app but away from directory
         const to = new URL("/dashboard", url.origin);
         to.searchParams.set("notice", "not-approved");
-        return NextResponse.redirect(to);
+        return redirectWithCookies(to);
       }
     }
 
-    if (path.startsWith("/onboarding")) {
-      // Always allowed when logged in (to update profile anytime)
-      // no extra checks
-    }
+    // /onboarding always allowed when logged in
   }
 
-  // 5) Otherwise let the request through
   return res;
 }
 
-// Only run on these routes
+// Only guard these; /auth/callback is intentionally NOT matched
 export const config = {
   matcher: ["/dashboard/:path*", "/directory/:path*", "/onboarding/:path*"],
 };
