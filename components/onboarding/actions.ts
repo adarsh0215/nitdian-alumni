@@ -1,8 +1,7 @@
 "use server";
 
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { createServerClient } from "@supabase/ssr";
+import { supabaseServer } from "@/lib/supabase/server";
 
 export async function saveOnboarding(input: {
   full_name: string;
@@ -13,7 +12,7 @@ export async function saveOnboarding(input: {
   country: string | null;
   graduation_year: number | null;
   degree: string | null;
-  department: string | null; // DB column (formerly "branch")
+  branch: string | null;
   employment_type: string | null;
   company: string | null;
   designation: string | null;
@@ -23,28 +22,12 @@ export async function saveOnboarding(input: {
   accepted_terms: boolean;
   accepted_privacy: boolean;
 }) {
-  const cookieStore = await cookies();
-
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll();
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => {
-            cookieStore.set({ name, value, ...options });
-          });
-        },
-      },
-    }
-  );
+  const supabase = supabaseServer();
 
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
   if (!user) redirect("/auth/login?redirect=/onboarding");
 
   const { error } = await supabase
@@ -58,7 +41,7 @@ export async function saveOnboarding(input: {
       country: input.country,
       graduation_year: input.graduation_year,
       degree: input.degree,
-      department: input.department, // ✅ write to department
+      branch: input.branch,
       employment_type: input.employment_type,
       company: input.company,
       designation: input.designation,
@@ -71,10 +54,7 @@ export async function saveOnboarding(input: {
     })
     .eq("id", user.id);
 
-  if (error) {
-    // You can throw to surface a 500, or redirect with a query param if preferred
-    throw new Error(error.message);
-  }
+  if (error) throw new Error(error.message);
 
   redirect("/dashboard");
 }

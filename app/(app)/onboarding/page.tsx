@@ -28,9 +28,6 @@ async function saveOnboarding(formData: FormData): Promise<void> {
       S(formData.get("phone_number")) ?? ""
     ) ?? null;
 
-  // The form uses "branch"; DB column is "department" -> map it here
-  const branch = S(formData.get("branch"));
-
   await saveObjectAction({
     full_name: S(formData.get("full_name")) ?? "",
     email: S(formData.get("email")) ?? "",
@@ -40,14 +37,12 @@ async function saveOnboarding(formData: FormData): Promise<void> {
     country: S(formData.get("country")),
     graduation_year: N(formData.get("graduation_year")),
     degree: S(formData.get("degree")),
-    department: branch, // ✅ map branch -> department
+    branch: S(formData.get("branch")),
     employment_type: S(formData.get("employment_type")),
     company: S(formData.get("company")),
     designation: S(formData.get("designation")),
     linkedin: S(formData.get("linkedin")),
     interests: formData.getAll("interests").map(String),
-
-    // booleans
     is_public: B(formData.get("is_public")),
     accepted_terms: B(formData.get("accepted_terms")),
     accepted_privacy: B(formData.get("accepted_privacy")),
@@ -55,7 +50,7 @@ async function saveOnboarding(formData: FormData): Promise<void> {
 }
 
 export default async function OnboardingPage() {
-  const supabase = supabaseServer(); // ✅ sync, no await
+  const supabase = supabaseServer();
 
   // Require auth
   const {
@@ -64,11 +59,11 @@ export default async function OnboardingPage() {
 
   if (!user) redirect("/auth/login?redirect=/onboarding");
 
-  // Prefill (read department from DB)
+  // Prefill from DB (use exact col names from schema)
   const { data: profile } = await supabase
     .from("profiles")
     .select(
-      "full_name,email,avatar_url,phone_e164,city,country,graduation_year,degree,department,employment_type,company,designation,linkedin,interests,is_public,accepted_terms,accepted_privacy"
+      "full_name,email,avatar_url,phone_e164,city,country,graduation_year,degree,branch,employment_type,company,designation,linkedin,interests,is_public,accepted_terms,accepted_privacy"
     )
     .eq("id", user.id)
     .maybeSingle();
@@ -81,14 +76,10 @@ export default async function OnboardingPage() {
       : "") ??
     "";
 
-  // Pass branch to the form if the row only has department
+  // Defaults for form fields
   const defaults: any = {
     ...profile,
     email: profile?.email ?? authEmail,
-    branch:
-      (profile as any)?.branch ??
-      (profile as any)?.department ??
-      undefined,
     accepted_terms: profile?.accepted_terms ?? false,
     accepted_privacy: profile?.accepted_privacy ?? false,
   };
