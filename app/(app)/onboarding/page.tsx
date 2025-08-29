@@ -6,14 +6,10 @@ import { redirect } from "next/navigation";
 import { supabaseServer } from "@/lib/supabase/server";
 import { saveOnboarding as saveObjectAction } from "@/components/onboarding/actions";
 import OnboardingForm from "@/components/onboarding/OnboardingForm";
+import { assembleE164 } from "@/lib/validation/onboarding";
 
 export const metadata = { title: "Onboarding • AlumniNet" };
 
-/**
- * Server wrapper that matches <form action> signature:
- * must return void | Promise<void>. It adapts FormData -> object
- * and awaits the real action (which will redirect on success).
- */
 async function saveOnboarding(formData: FormData): Promise<void> {
   "use server";
 
@@ -24,42 +20,48 @@ async function saveOnboarding(formData: FormData): Promise<void> {
   };
   const B = (v: FormDataEntryValue | null) => v === "on" || v === "true" || v === "1";
 
+  // Build E.164 from separate inputs
+  const phone_e164 =
+    assembleE164(S(formData.get("phone_country")) ?? "", S(formData.get("phone_number")) ?? "") ??
+    null;
+
   await saveObjectAction({
     full_name: S(formData.get("full_name")) ?? "",
     email: S(formData.get("email")) ?? "",
     avatar_url: S(formData.get("avatar_url")),
-    phone_e164: S(formData.get("phone_e164")),
+    phone_e164,
     city: S(formData.get("city")),
     country: S(formData.get("country")),
     graduation_year: N(formData.get("graduation_year")),
     degree: S(formData.get("degree")),
-    department: S(formData.get("department")), // ensure this matches your DB column
+    department: S(formData.get("department")), // or map to `branch` if that's your column
     employment_type: S(formData.get("employment_type")),
     company: S(formData.get("company")),
     designation: S(formData.get("designation")),
     linkedin: S(formData.get("linkedin")),
     interests: formData.getAll("interests").map(String),
     is_public: B(formData.get("is_public")),
+
+    // ✅ include consent
+    accepted_terms: B(formData.get("accepted_terms")),
+    accepted_privacy: B(formData.get("accepted_privacy")),
   });
 }
 
 export default async function OnboardingPage() {
   const supabase = await supabaseServer();
 
-  // Require auth
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/auth/login?redirect=/onboarding");
 
-  // Load profile for prefill
   const { data: profile } = await supabase
     .from("profiles")
     .select(
-      "full_name,email,avatar_url,phone_e164,city,country,graduation_year,degree,department,employment_type,company,designation,linkedin,interests,is_public"
+      "full_name,email,avatar_url,phone_e164,city,country,graduation_year,degree,department,employment_type,company,designation,linkedin,interests,is_public,accepted_terms,accepted_privacy"
     )
     .eq("id", user.id)
     .maybeSingle();
 
-  // ✅ Fallback to auth email if profile.email is null
   const authEmail =
     user.email ??
     (typeof (user as any)?.user_metadata?.email === "string"
@@ -70,6 +72,8 @@ export default async function OnboardingPage() {
   const defaults = {
     ...profile,
     email: profile?.email ?? authEmail,
+    accepted_terms: profile?.accepted_terms ?? false,
+    accepted_privacy: profile?.accepted_privacy ?? false,
   };
 
   return (
@@ -82,8 +86,6 @@ export default async function OnboardingPage() {
           </p>
         </div>
 
-        {/* Pass the server action + prefill into the client form.
-           The <form> tag lives inside OnboardingForm and uses action={...}. */}
         <OnboardingForm action={saveOnboarding} defaultValues={defaults} />
       </div>
     </div>

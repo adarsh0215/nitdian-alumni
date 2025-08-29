@@ -10,7 +10,7 @@ export async function saveOnboarding(input: {
   phone_e164: string | null; city: string | null; country: string | null;
   graduation_year: number | null; degree: string | null; department: string | null;
   employment_type: string | null; company: string | null; designation: string | null;
-  linkedin: string | null; interests: string[]; is_public: boolean;
+  linkedin: string | null; interests: string[]; is_public: boolean; accepted_terms: boolean; accepted_privacy: boolean;
 }) {
   const cookieStore = await cookies();
 
@@ -54,6 +54,8 @@ export async function saveOnboarding(input: {
       interests: input.interests,
       is_public: input.is_public,
       onboarded: true,                      // flip the flag here
+      accepted_terms: !!input.accepted_terms,
+      accepted_privacy: !!input.accepted_privacy,
     })
     .eq("id", user.id);
 

@@ -311,7 +311,7 @@ export function toFormDefaults(existing?: Partial<ProfileRow> | null): Onboardin
     // Academic
     graduation_year: defaultYear,
     degree: (existing?.degree as (typeof DEGREES)[number]) ?? "B.Tech",
-    branch: (existing?.branch as (typeof BRANCHES)[number]) ?? "CSE",
+    branch: (existing?.branch as (typeof BRANCHES)[number]) ?? "Computer Science & Engineering",
 
     // Professional
     employment_type:
