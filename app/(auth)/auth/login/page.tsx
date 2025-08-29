@@ -1,7 +1,16 @@
+// app/(auth)/auth/login/page.tsx
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 import LoginForm from "@/components/auth/LoginForm";
 
-type SearchParams = Record<string, string | string[] | undefined>;
-function safePath(raw: string | string[] | undefined): string {
+type SearchParams = {
+  next?: string | string[];
+  redirect?: string | string[];
+  error?: string | string[];
+};
+
+function safePath(raw?: string | string[] | null): string {
   const val = Array.isArray(raw) ? raw[0] : raw;
   if (!val) return "/dashboard";
   const s = val.trim();
@@ -10,8 +19,15 @@ function safePath(raw: string | string[] | undefined): string {
   return s;
 }
 
-export default function Page({ searchParams }: { searchParams: SearchParams }) {
-  const next = safePath(searchParams.next || searchParams.redirect);
+export default async function Page({
+  searchParams,
+}: {
+  // ✅ Next 15: searchParams is a Promise in Server Components
+  searchParams: Promise<SearchParams>;
+}) {
+  const sp = await searchParams; // <-- await before using
+  const next = safePath(sp.next ?? sp.redirect ?? null);
+
   return (
     <div className="page-container py-16">
       <div className="mx-auto w-full max-w-[420px]">

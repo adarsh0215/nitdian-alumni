@@ -41,19 +41,16 @@ async function saveOnboarding(formData: FormData): Promise<void> {
     interests: formData.getAll("interests").map(String),
     is_public: B(formData.get("is_public")),
   });
-  // no return value -> satisfies <form action> typing
 }
 
 export default async function OnboardingPage() {
   const supabase = await supabaseServer();
 
   // Require auth
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/auth/login?redirect=/onboarding");
 
-  // Prefill values
+  // Load profile for prefill
   const { data: profile } = await supabase
     .from("profiles")
     .select(
@@ -61,6 +58,19 @@ export default async function OnboardingPage() {
     )
     .eq("id", user.id)
     .maybeSingle();
+
+  // ✅ Fallback to auth email if profile.email is null
+  const authEmail =
+    user.email ??
+    (typeof (user as any)?.user_metadata?.email === "string"
+      ? (user as any).user_metadata.email
+      : "") ??
+    "";
+
+  const defaults = {
+    ...profile,
+    email: profile?.email ?? authEmail,
+  };
 
   return (
     <div className="px-4 py-10">
@@ -72,9 +82,9 @@ export default async function OnboardingPage() {
           </p>
         </div>
 
-        {/* Pass the server action + prefill into the client form. 
-           The form tag lives inside OnboardingForm. */}
-        <OnboardingForm action={saveOnboarding} defaultValues={profile ?? undefined} />
+        {/* Pass the server action + prefill into the client form.
+           The <form> tag lives inside OnboardingForm and uses action={...}. */}
+        <OnboardingForm action={saveOnboarding} defaultValues={defaults} />
       </div>
     </div>
   );
