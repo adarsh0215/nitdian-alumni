@@ -1,96 +1,154 @@
-// components/onboarding/sections/LinksSection.tsx
-"use client";
+// middleware.ts
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { createServerClient, type CookieOptions } from "@supabase/ssr";
 
-import * as React from "react";
-import type { UseFormReturn } from "react-hook-form";
-import {
-  FormField,
-  FormItem,
-  FormLabel,
-  FormControl,
-  FormMessage,
-  FormDescription,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Linkedin } from "lucide-react";
-import type { OnboardingValues } from "@/lib/validation/onboarding";
-import { normalizeLinkedIn } from "@/lib/validation/onboarding";
+/**
+ * Rules you asked for:
+ * 1) If onboarded => can access /dashboard.
+ * 2) If verified by admin => can access /directory.
+ * 3) /onboarding is always accessible to a logged-in user (to update profile).
+ *
+ * Also:
+ * - Unauthed users get sent to /auth/login?next=<current>.
+ * - Avoid throwing/logging for the common "Auth session missing" case.
+ * - Avoid redirect loops.
+ */
 
-export default function LinksSection({ form }: { form: UseFormReturn<OnboardingValues> }) {
-  // Live, read-only preview that mirrors server-side normalization
-  const raw = form.watch("linkedin") || "";
-  const preview = React.useMemo(() => {
-    const n = normalizeLinkedIn(raw);
-    return n && n.length > 0 ? n : "";
-  }, [raw]);
+const PUBLIC_ROUTES = new Set<string>([
+  "/",                     // your landing page
+  "/favicon.ico",
+]);
 
+const AUTH_ROUTES = ["/auth/login", "/auth/signup"]; // pages that should be visible when logged out
+
+// Helpers
+function isAsset(req: NextRequest) {
+  const { pathname } = new URL(req.url);
   return (
-    <section aria-labelledby="links-heading" className="space-y-3">
-      <div className="flex items-center justify-between">
-        <h3
-          id="links-heading"
-          className="text-sm font-medium tracking-tight text-muted-foreground"
-        >
-          Links
-        </h3>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
-        <FormField
-          control={form.control}
-          name="linkedin"
-          render={({ field }) => (
-            <FormItem className="space-y-2">
-              <FormLabel className="text-[13px]">LinkedIn</FormLabel>
-
-              {/* Input with leading icon */}
-              <div className="relative">
-                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                  <Linkedin className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-                </div>
-                <FormControl>
-                  <Input
-                    {...field}
-                    className="h-11 pl-9"
-                    inputMode="url"
-                    autoComplete="url"
-                    autoCapitalize="none"
-                    autoCorrect="off"
-                    spellCheck={false}
-                    placeholder="in/adarsh or full URL"
-                    maxLength={200}
-                    onBlur={(e) => {
-                      // Gentle cleanup: trim only (Zod schema normalizes fully)
-                      const trimmed = e.target.value.trim();
-                      if (trimmed !== field.value) field.onChange(trimmed);
-                    }}
-                  />
-                </FormControl>
-              </div>
-
-              <FormDescription className="text-[11px] leading-4 text-muted-foreground">
-                Paste your full profile URL or just the handle (e.g., <code>in/adarsh</code>).
-                We’ll tidy it automatically.
-              </FormDescription>
-
-              {preview ? (
-                <div className="text-[11px] leading-4">
-                  <a
-                    href={preview}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="underline text-muted-foreground hover:text-foreground"
-                  >
-                    Preview: {preview}
-                  </a>
-                </div>
-              ) : null}
-
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-      </div>
-    </section>
+    pathname.startsWith("/_next/") ||
+    pathname.startsWith("/static/") ||
+    pathname.startsWith("/images/") ||
+    pathname.startsWith("/icons/") ||
+    pathname.endsWith(".png") ||
+    pathname.endsWith(".jpg") ||
+    pathname.endsWith(".jpeg") ||
+    pathname.endsWith(".svg") ||
+    pathname.endsWith(".ico") ||
+    pathname.endsWith(".webp")
   );
 }
+
+function redirectWithNext(req: NextRequest, path: string) {
+  const url = new URL(path, req.url);
+  url.searchParams.set("next", new URL(req.url).pathname + new URL(req.url).search);
+  return NextResponse.redirect(url);
+}
+
+export async function middleware(req: NextRequest) {
+  const res = NextResponse.next();
+  const url = new URL(req.url);
+  const path = url.pathname;
+
+  // Skip assets and public routes
+  if (isAsset(req) || PUBLIC_ROUTES.has(path)) return res;
+
+  // Allow AUTH routes unauthenticated; if already logged in we’ll shove them to dashboard
+  const isAuthRoute = AUTH_ROUTES.some((p) => path.startsWith(p));
+
+  // Build Supabase SSR client (Edge-safe)
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get: (name: string) => req.cookies.get(name)?.value,
+        set: (name: string, value: string, options: CookieOptions) => {
+          // Mirror cookie updates back to the response
+          res.cookies.set(name, value, options);
+        },
+        remove: (name: string, options: CookieOptions) => {
+          res.cookies.set(name, "", options);
+        },
+      },
+    }
+  );
+
+  // ---- Auth: never throw on "missing session"
+  let user = null as null | { id: string };
+  try {
+    const { data, error } = await supabase.auth.getUser();
+    if (!error && data?.user) user = { id: data.user.id };
+    // If error?.message === "Auth session missing" -> just treat as logged out (do not console.error)
+  } catch {
+    // Completely swallow unexpected throws here to avoid Digest pages from middleware
+  }
+
+  // If not logged in:
+  if (!user) {
+    if (isAuthRoute) return res;                  // can view /auth/*
+    if (path.startsWith("/onboarding")) return redirectWithNext(req, "/auth/login"); // require login to edit profile
+    // protected/approved routes require login
+    return redirectWithNext(req, "/auth/login");
+  }
+
+  // Logged in: optionally fetch profile flags (onboarded / is_approved)
+  let onboarded = false;
+  let isApproved = false;
+
+  try {
+    const { data: profile, error } = await supabase
+      .from("profiles")
+      .select("onboarded, is_approved")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (!error && profile) {
+      onboarded = !!profile.onboarded;
+      isApproved = !!profile.is_approved;
+    }
+    // If there was a DB error, we don't throw from middleware; we just act conservatively (require onboarding)
+  } catch {
+    // same—never throw in middleware
+  }
+
+  // Redirect logged-in user away from /auth pages
+  if (isAuthRoute) {
+    return NextResponse.redirect(new URL("/dashboard", req.url));
+  }
+
+  // /onboarding: always allowed when logged in
+  if (path.startsWith("/onboarding")) {
+    return res;
+  }
+
+  // /dashboard: require onboarded
+  if (path.startsWith("/dashboard")) {
+    if (!onboarded) {
+      return NextResponse.redirect(new URL("/onboarding", req.url));
+    }
+    return res;
+  }
+
+  // /directory: require is_approved (admin verified)
+  if (path.startsWith("/directory")) {
+    if (!onboarded) {
+      return NextResponse.redirect(new URL("/onboarding", req.url));
+    }
+    if (!isApproved) {
+      // not approved yet → send to dashboard (or a “pending approval” page if you have one)
+      return NextResponse.redirect(new URL("/dashboard", req.url));
+    }
+    return res;
+  }
+
+  // Default: allow
+  return res;
+}
+
+// Match only application routes (avoid static files entirely)
+export const config = {
+  matcher: [
+    "/((?!_next/|.*\\..*).*)",
+  ],
+};
