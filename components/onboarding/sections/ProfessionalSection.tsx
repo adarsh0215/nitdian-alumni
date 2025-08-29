@@ -1,11 +1,20 @@
 "use client";
+
 import * as React from "react";
 import type { UseFormReturn } from "react-hook-form";
 import {
-  FormField, FormItem, FormLabel, FormControl, FormMessage, FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormControl,
+  FormMessage,
 } from "@/components/ui/form";
 import {
-  Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import type { OnboardingValues } from "@/lib/validation/onboarding";
@@ -16,7 +25,7 @@ type Props = {
 };
 
 export default function ProfessionalSection({ form, EMPLOYMENT_TYPES }: Props) {
-  // UI-only helpers for nicer placeholders (doesn't change validation/DB mapping)
+  // UI-only helpers for nicer placeholders
   const type = form.watch("employment_type");
   const companyPlaceholder =
     type === "Student"
@@ -33,7 +42,6 @@ export default function ProfessionalSection({ form, EMPLOYMENT_TYPES }: Props) {
 
   return (
     <section aria-labelledby="professional-heading" className="space-y-3">
-      {/* Section header */}
       <div className="flex items-center justify-between">
         <h3
           id="professional-heading"
@@ -50,9 +58,9 @@ export default function ProfessionalSection({ form, EMPLOYMENT_TYPES }: Props) {
           name="employment_type"
           render={({ field }) => (
             <FormItem className="space-y-2">
-              <FormLabel className="inline-flex  items-center gap-1 text-[13px]">
+              <FormLabel className="inline-flex items-center gap-1 text-[13px]">
                 Employment type
-                <span aria-hidden="true" className="text-red-500">*</span>
+                <span aria-hidden className="text-red-500">*</span>
                 <span className="sr-only">(required)</span>
               </FormLabel>
               <Select value={field.value} onValueChange={field.onChange}>
@@ -113,6 +121,29 @@ export default function ProfessionalSection({ form, EMPLOYMENT_TYPES }: Props) {
                   autoCapitalize="words"
                   spellCheck={false}
                   maxLength={120}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {/* LinkedIn (optional) */}
+        <FormField
+          control={form.control}
+          name="linkedin"
+          render={({ field }) => (
+            <FormItem className="space-y-2 md:col-span-3">
+              <FormLabel className="text-[13px]">LinkedIn (optional)</FormLabel>
+              <FormControl>
+                <Input
+                  {...field}
+                  className="h-11"
+                  placeholder="linkedin.com/in/username or username"
+                  inputMode="url"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  maxLength={200}
                 />
               </FormControl>
               <FormMessage />

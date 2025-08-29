@@ -18,15 +18,11 @@ async function saveOnboarding(formData: FormData): Promise<void> {
     const n = Number(v);
     return Number.isFinite(n) ? n : null;
   };
-  const B = (v: FormDataEntryValue | null) =>
-    v === "on" || v === "true" || v === "1";
+  const B = (v: FormDataEntryValue | null) => v === "on" || v === "true" || v === "1";
 
-  // Build E.164 from separate inputs
   const phone_e164 =
-    assembleE164(
-      S(formData.get("phone_country")) ?? "",
-      S(formData.get("phone_number")) ?? ""
-    ) ?? null;
+    assembleE164(S(formData.get("phone_country")) ?? "", S(formData.get("phone_number")) ?? "") ??
+    null;
 
   await saveObjectAction({
     full_name: S(formData.get("full_name")) ?? "",
@@ -52,14 +48,12 @@ async function saveOnboarding(formData: FormData): Promise<void> {
 export default async function OnboardingPage() {
   const supabase = supabaseServer();
 
-  // Require auth
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   if (!user) redirect("/auth/login?redirect=/onboarding");
 
-  // Prefill from DB (use exact col names from schema)
   const { data: profile } = await supabase
     .from("profiles")
     .select(
@@ -68,7 +62,6 @@ export default async function OnboardingPage() {
     .eq("id", user.id)
     .maybeSingle();
 
-  // Fallback to auth email if row.email is null
   const authEmail =
     user.email ??
     (typeof (user as any)?.user_metadata?.email === "string"
@@ -76,10 +69,24 @@ export default async function OnboardingPage() {
       : "") ??
     "";
 
-  // Defaults for form fields
+  // ✅ safer defaults for controlled inputs
   const defaults: any = {
     ...profile,
+    full_name: profile?.full_name ?? "",        // ensure not undefined
     email: profile?.email ?? authEmail,
+    avatar_url: profile?.avatar_url ?? null,
+    phone_e164: profile?.phone_e164 ?? "",
+    city: profile?.city ?? "",
+    country: profile?.country ?? "",
+    graduation_year: profile?.graduation_year ?? null,
+    degree: profile?.degree ?? "",
+    branch: profile?.branch ?? "",
+    employment_type: profile?.employment_type ?? "Student",
+    company: profile?.company ?? "",
+    designation: profile?.designation ?? "",
+    linkedin: profile?.linkedin ?? "",
+    interests: profile?.interests ?? [],        // 👈 ensure array
+    is_public: profile?.is_public ?? true,
     accepted_terms: profile?.accepted_terms ?? false,
     accepted_privacy: profile?.accepted_privacy ?? false,
   };
@@ -88,9 +95,7 @@ export default async function OnboardingPage() {
     <div className="px-4 py-10">
       <div className="max-w-3xl mx-auto">
         <div className="mb-6">
-          <h1 className="text-2xl font-semibold tracking-tight">
-            Let’s get you set up
-          </h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Let’s get you set up</h1>
           <p className="text-sm text-muted-foreground">
             Fill in a few details so other alumni can find you.
           </p>

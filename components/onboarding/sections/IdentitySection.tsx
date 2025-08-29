@@ -8,7 +8,6 @@ import {
   FormLabel,
   FormControl,
   FormMessage,
-  FormDescription,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import type { OnboardingValues } from "@/lib/validation/onboarding";
@@ -25,9 +24,14 @@ export default function IdentitySection({
   avatarPreview,
   setAvatarPreview,
 }: Props) {
+  // Safely read a value that isn't in OnboardingValues' type.
+  // We avoid 'watch' and 'register' to keep TS happy when avatar_url isn't in the schema.
+  const avatarUrl =
+    ((form.getValues() as any)?.avatar_url as string | undefined) ?? "";
+  const emailValue = form.watch("email") ?? "";
+
   return (
     <section aria-labelledby="identity-heading" className="space-y-3">
-      {/* Section header */}
       <div className="flex items-center justify-between">
         <h3
           id="identity-heading"
@@ -38,21 +42,22 @@ export default function IdentitySection({
         <span className="text-xs text-muted-foreground/80">* required</span>
       </div>
 
-      {/* Fixed avatar column + flexible fields (social-style layout) */}
       <div className="grid gap-6 md:grid-cols-[112px,1fr]">
-        {/* Left: avatar (fixed width, top-aligned) */}
+        {/* Left: avatar */}
         <div className="pt-1">
           <AvatarPicker
             form={form}
             preview={avatarPreview}
             onClearPreview={() => {
               form.setValue("avatar_file", undefined);
+              // If you also track avatar_url elsewhere, you can clear it too:
+              // (form.getValues() as any).avatar_url = "";
               setAvatarPreview(null);
             }}
           />
         </div>
 
-        {/* Right: name & email fields in a 2-col grid, stack on small screens */}
+        {/* Right: name & email */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
           <FormField
             control={form.control}
@@ -60,8 +65,7 @@ export default function IdentitySection({
             render={({ field }) => (
               <FormItem className="space-y-2">
                 <FormLabel className="inline-flex items-center gap-1 text-[13px]">
-                  Full name
-                  <span aria-hidden="true" className="text-red-500">*</span>
+                  Full name <span aria-hidden="true" className="text-red-500">*</span>
                   <span className="sr-only">(required)</span>
                 </FormLabel>
                 <FormControl>
@@ -87,29 +91,34 @@ export default function IdentitySection({
             render={({ field }) => (
               <FormItem className="space-y-2">
                 <FormLabel className="inline-flex items-center gap-1 text-[13px]">
-                  Email
-                  <span aria-hidden="true" className="text-red-500">*</span>
+                  Email <span aria-hidden="true" className="text-red-500">*</span>
                   <span className="sr-only">(required)</span>
                 </FormLabel>
                 <FormControl>
+                  {/* readOnly (not disabled) so it gets submitted */}
                   <Input
                     {...field}
                     type="email"
                     inputMode="email"
                     autoComplete="email"
-                    className="h-11 disabled:opacity-100 disabled:cursor-not-allowed"
-                    disabled
+                    className="h-11"
+                    readOnly
                     autoCorrect="off"
                     spellCheck={false}
                   />
                 </FormControl>
-                
                 <FormMessage />
               </FormItem>
             )}
           />
         </div>
       </div>
+
+      {/* Hidden mirrors so FormData always contains these values */}
+      {/* avatar_url: not registered with RHF; plain hidden input is enough */}
+      <input type="hidden" name="avatar_url" value={avatarUrl} />
+      {/* email: safety mirror; harmless even with readOnly input */}
+      <input type="hidden" name="email" value={emailValue} />
     </section>
   );
 }

@@ -1,4 +1,6 @@
+// components/onboarding/sections/ConsentSection.tsx
 "use client";
+
 import type { UseFormReturn } from "react-hook-form";
 import {
   FormField,
@@ -12,11 +14,18 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import type { OnboardingValues } from "@/lib/validation/onboarding";
 
-export default function ConsentSection({ form }: { form: UseFormReturn<OnboardingValues> }) {
+export default function ConsentSection({
+  form,
+}: {
+  form: UseFormReturn<OnboardingValues>;
+}) {
   return (
     <section aria-labelledby="consent-heading" className="space-y-3">
       <div className="flex items-center justify-between">
-        <h3 id="consent-heading" className="text-sm font-medium tracking-tight text-muted-foreground">
+        <h3
+          id="consent-heading"
+          className="text-sm font-medium tracking-tight text-muted-foreground"
+        >
           Visibility & consent
         </h3>
         <span className="text-xs text-muted-foreground">* required</span>
@@ -39,7 +48,8 @@ export default function ConsentSection({ form }: { form: UseFormReturn<Onboardin
                     List me in public directory
                   </FormLabel>
                   <FormDescription id="public-desc" className="text-[11px] leading-4">
-                    When approved, your basic profile is visible to members. You can change this later.
+                    When approved, your basic profile is visible to members. You can
+                    change this later.
                   </FormDescription>
                 </div>
                 <FormControl>
@@ -50,7 +60,7 @@ export default function ConsentSection({ form }: { form: UseFormReturn<Onboardin
                   />
                 </FormControl>
               </FormItem>
-              {/* ensure value is posted to the Server Action */}
+              {/* Ensure a value is posted to the Server Action */}
               <input type="hidden" name="is_public" value={field.value ? "true" : ""} />
             </>
           )}
@@ -71,18 +81,27 @@ export default function ConsentSection({ form }: { form: UseFormReturn<Onboardin
                   />
                 </FormControl>
                 <div className="space-y-1 leading-tight">
-                  <FormLabel id="terms-label" className="font-normal text-[13px] inline-flex items-center gap-1">
+                  <FormLabel
+                    id="terms-label"
+                    className="font-normal text-[13px] inline-flex items-center gap-1"
+                  >
                     I agree to the{" "}
                     <a className="underline" href="/terms" target="_blank" rel="noreferrer">
                       Terms
                     </a>
-                    <span aria-hidden="true" className="text-red-500">*</span>
+                    <span aria-hidden="true" className="text-red-500">
+                      *
+                    </span>
                     <span className="sr-only">(required)</span>
                   </FormLabel>
                   <FormMessage />
                 </div>
               </FormItem>
-              <input type="hidden" name="accepted_terms" value={field.value ? "true" : ""} />
+              <input
+                type="hidden"
+                name="accepted_terms"
+                value={field.value ? "true" : ""}
+              />
             </>
           )}
         />
@@ -102,18 +121,32 @@ export default function ConsentSection({ form }: { form: UseFormReturn<Onboardin
                   />
                 </FormControl>
                 <div className="space-y-1 leading-tight">
-                  <FormLabel id="privacy-label" className="font-normal text-[13px] inline-flex items-center gap-1">
+                  <FormLabel
+                    id="privacy-label"
+                    className="font-normal text-[13px] inline-flex items-center gap-1"
+                  >
                     I agree to the{" "}
-                    <a className="underline" href="/privacy" target="_blank" rel="noreferrer">
+                    <a
+                      className="underline"
+                      href="/privacy"
+                      target="_blank"
+                      rel="noreferrer"
+                    >
                       Privacy Policy
                     </a>
-                    <span aria-hidden="true" className="text-red-500">*</span>
+                    <span aria-hidden="true" className="text-red-500">
+                      *
+                    </span>
                     <span className="sr-only">(required)</span>
                   </FormLabel>
                   <FormMessage />
                 </div>
               </FormItem>
-              <input type="hidden" name="accepted_privacy" value={field.value ? "true" : ""} />
+              <input
+                type="hidden"
+                name="accepted_privacy"
+                value={field.value ? "true" : ""}
+              />
             </>
           )}
         />

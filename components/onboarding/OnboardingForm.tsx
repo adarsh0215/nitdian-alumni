@@ -33,7 +33,7 @@ import ConsentSection from "./sections/ConsentSection";
 
 export type OnboardingFormProps = {
   action: (formData: FormData) => void | Promise<void>;
-  defaultValues?: Partial<OnboardingValues> | any; // allow branch/department passthrough
+  defaultValues?: Partial<OnboardingValues> | any;
 };
 
 export default function OnboardingForm({ action, defaultValues }: OnboardingFormProps) {
@@ -46,13 +46,13 @@ export default function OnboardingForm({ action, defaultValues }: OnboardingForm
     mode: "onChange",
   });
 
-  // Sync later-loaded defaults
+  // Re-hydrate defaults when they arrive
   React.useEffect(() => {
     if (defaultValues) form.reset(toFormDefaults(defaultValues));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [JSON.stringify(defaultValues)]);
 
-  // Live preview for new avatar file (if your IdentitySection sets avatar_file)
+  // Live avatar preview if your IdentitySection sets `avatar_file`
   React.useEffect(() => {
     const file = form.getValues("avatar_file") as File | undefined;
     if (!file) return;
@@ -62,22 +62,34 @@ export default function OnboardingForm({ action, defaultValues }: OnboardingForm
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.watch("avatar_file")]);
 
-  // Let the browser submit to the Server Action only if RHF+zod say valid
+  // Validate with RHF+zod; only block when invalid; prevent double-submits
   async function handlePreSubmit(e: React.FormEvent<HTMLFormElement>) {
+    if (submitting) {
+      e.preventDefault();
+      return;
+    }
     const valid = await form.trigger();
     if (!valid) {
       e.preventDefault();
       toast.error("Please fix the highlighted fields.");
       return;
     }
-    setSubmitting(true);
+    setSubmitting(true); // allow native submit to Server Action
   }
 
   return (
     <Card className="mx-auto w-full max-w-2xl border-0 shadow-none">
       <CardContent>
         <Form {...form}>
-          <form action={action} onSubmit={handlePreSubmit} noValidate className="space-y-8">
+          <form
+            action={action}
+            method="post"
+            encType="multipart/form-data" // safe if no files; required if you add them later
+            onSubmit={handlePreSubmit}
+            noValidate
+            className="space-y-8"
+          >
+            {/* Identity: full_name, email, avatar_url (or avatar_file) */}
             <IdentitySection
               form={form}
               avatarPreview={avatarPreview}
@@ -85,20 +97,23 @@ export default function OnboardingForm({ action, defaultValues }: OnboardingForm
             />
 
             <Separator />
+            {/* Contact: phone_country, phone_number, city, country */}
             <ContactSection form={form} COUNTRY_CODES={COUNTRY_CODES} />
 
             <Separator />
+            {/* Academic: graduation_year, degree, branch */}
             <AcademicSection form={form} YEARS={YEARS} DEGREES={DEGREES} BRANCHES={BRANCHES} />
 
             <Separator />
+            {/* Professional: employment_type, company, designation, linkedin */}
             <ProfessionalSection form={form} EMPLOYMENT_TYPES={EMPLOYMENT_TYPES} />
 
             <Separator />
-            {/* <LinksSection form={form} /> */}
-
+            {/* Interests: multiple checkboxes all named "interests" */}
             <InterestsSection form={form} INTERESTS={INTERESTS} />
 
             <Separator />
+            {/* Consent & visibility: is_public, accepted_terms, accepted_privacy */}
             <ConsentSection form={form} />
 
             <div className="flex flex-col-reverse sm:flex-row sm:items-center gap-3 pt-2">

@@ -1,10 +1,19 @@
 "use client";
+
 import type { UseFormReturn } from "react-hook-form";
 import {
-  FormField, FormItem, FormLabel, FormControl, FormMessage, FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormControl,
+  FormMessage,
 } from "@/components/ui/form";
 import {
-  Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
 } from "@/components/ui/select";
 import type { OnboardingValues } from "@/lib/validation/onboarding";
 
@@ -18,7 +27,6 @@ type Props = {
 export default function AcademicSection({ form, YEARS, DEGREES, BRANCHES }: Props) {
   return (
     <section aria-labelledby="academic-heading" className="space-y-3">
-      {/* Section header */}
       <div className="flex items-center justify-between">
         <h3
           id="academic-heading"
@@ -37,7 +45,7 @@ export default function AcademicSection({ form, YEARS, DEGREES, BRANCHES }: Prop
             <FormItem className="space-y-2">
               <FormLabel className="inline-flex items-center gap-1 text-[13px]">
                 Graduation year
-                <span aria-hidden="true" className="text-red-500">*</span>
+                <span aria-hidden className="text-red-500">*</span>
                 <span className="sr-only">(required)</span>
               </FormLabel>
               <Select
@@ -57,7 +65,6 @@ export default function AcademicSection({ form, YEARS, DEGREES, BRANCHES }: Prop
                   ))}
                 </SelectContent>
               </Select>
-              
               <FormMessage />
             </FormItem>
           )}
@@ -71,7 +78,7 @@ export default function AcademicSection({ form, YEARS, DEGREES, BRANCHES }: Prop
             <FormItem className="space-y-2">
               <FormLabel className="inline-flex items-center gap-1 text-[13px]">
                 Department/Branch
-                <span aria-hidden="true" className="text-red-500">*</span>
+                <span aria-hidden className="text-red-500">*</span>
                 <span className="sr-only">(required)</span>
               </FormLabel>
               <Select value={field.value} onValueChange={field.onChange}>
@@ -88,7 +95,6 @@ export default function AcademicSection({ form, YEARS, DEGREES, BRANCHES }: Prop
                   ))}
                 </SelectContent>
               </Select>
-          
               <FormMessage />
             </FormItem>
           )}
@@ -102,7 +108,7 @@ export default function AcademicSection({ form, YEARS, DEGREES, BRANCHES }: Prop
             <FormItem className="space-y-2">
               <FormLabel className="inline-flex items-center gap-1 text-[13px]">
                 Degree
-                <span aria-hidden="true" className="text-red-500">*</span>
+                <span aria-hidden className="text-red-500">*</span>
                 <span className="sr-only">(required)</span>
               </FormLabel>
               <Select value={field.value} onValueChange={field.onChange}>
@@ -123,8 +129,6 @@ export default function AcademicSection({ form, YEARS, DEGREES, BRANCHES }: Prop
             </FormItem>
           )}
         />
-
-        
       </div>
     </section>
   );

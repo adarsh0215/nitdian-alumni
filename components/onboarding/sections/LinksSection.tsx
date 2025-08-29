@@ -1,3 +1,4 @@
+// components/onboarding/sections/LinksSection.tsx
 "use client";
 
 import * as React from "react";
@@ -25,7 +26,6 @@ export default function LinksSection({ form }: { form: UseFormReturn<OnboardingV
 
   return (
     <section aria-labelledby="links-heading" className="space-y-3">
-      {/* Section header */}
       <div className="flex items-center justify-between">
         <h3
           id="links-heading"
@@ -43,7 +43,7 @@ export default function LinksSection({ form }: { form: UseFormReturn<OnboardingV
             <FormItem className="space-y-2">
               <FormLabel className="text-[13px]">LinkedIn</FormLabel>
 
-              {/* Input with leading icon (social-style adornment) */}
+              {/* Input with leading icon */}
               <div className="relative">
                 <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
                   <Linkedin className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
@@ -54,11 +54,13 @@ export default function LinksSection({ form }: { form: UseFormReturn<OnboardingV
                     className="h-11 pl-9"
                     inputMode="url"
                     autoComplete="url"
+                    autoCapitalize="none"
+                    autoCorrect="off"
                     spellCheck={false}
                     placeholder="in/adarsh or full URL"
                     maxLength={200}
                     onBlur={(e) => {
-                      // Gentle cleanup: trim only (normalization happens in schema already)
+                      // Gentle cleanup: trim only (Zod schema normalizes fully)
                       const trimmed = e.target.value.trim();
                       if (trimmed !== field.value) field.onChange(trimmed);
                     }}
@@ -66,7 +68,6 @@ export default function LinksSection({ form }: { form: UseFormReturn<OnboardingV
                 </FormControl>
               </div>
 
-              {/* Helper + preview */}
               <FormDescription className="text-[11px] leading-4 text-muted-foreground">
                 Paste your full profile URL or just the handle (e.g., <code>in/adarsh</code>).
                 We’ll tidy it automatically.
@@ -77,7 +78,7 @@ export default function LinksSection({ form }: { form: UseFormReturn<OnboardingV
                   <a
                     href={preview}
                     target="_blank"
-                    rel="noreferrer"
+                    rel="noopener noreferrer"
                     className="underline text-muted-foreground hover:text-foreground"
                   >
                     Preview: {preview}
