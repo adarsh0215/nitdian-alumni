@@ -18,12 +18,15 @@ async function saveOnboarding(formData: FormData): Promise<void> {
     const n = Number(v);
     return Number.isFinite(n) ? n : null;
   };
-  const B = (v: FormDataEntryValue | null) => v === "on" || v === "true" || v === "1";
+  const B = (v: FormDataEntryValue | null) =>
+    v === "on" || v === "true" || v === "1";
 
   // Build E.164 from separate inputs
   const phone_e164 =
-    assembleE164(S(formData.get("phone_country")) ?? "", S(formData.get("phone_number")) ?? "") ??
-    null;
+    assembleE164(
+      S(formData.get("phone_country")) ?? "",
+      S(formData.get("phone_number")) ?? ""
+    ) ?? null;
 
   // The form uses "branch"; DB column is "department" -> map it here
   const branch = S(formData.get("branch"));
@@ -52,12 +55,13 @@ async function saveOnboarding(formData: FormData): Promise<void> {
 }
 
 export default async function OnboardingPage() {
-  const supabase = await supabaseServer();
+  const supabase = supabaseServer(); // ✅ sync, no await
 
   // Require auth
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
   if (!user) redirect("/auth/login?redirect=/onboarding");
 
   // Prefill (read department from DB)
@@ -81,7 +85,10 @@ export default async function OnboardingPage() {
   const defaults: any = {
     ...profile,
     email: profile?.email ?? authEmail,
-    branch: (profile as any)?.branch ?? (profile as any)?.department ?? undefined,
+    branch:
+      (profile as any)?.branch ??
+      (profile as any)?.department ??
+      undefined,
     accepted_terms: profile?.accepted_terms ?? false,
     accepted_privacy: profile?.accepted_privacy ?? false,
   };
@@ -90,7 +97,9 @@ export default async function OnboardingPage() {
     <div className="px-4 py-10">
       <div className="max-w-3xl mx-auto">
         <div className="mb-6">
-          <h1 className="text-2xl font-semibold tracking-tight">Let’s get you set up</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">
+            Let’s get you set up
+          </h1>
           <p className="text-sm text-muted-foreground">
             Fill in a few details so other alumni can find you.
           </p>
