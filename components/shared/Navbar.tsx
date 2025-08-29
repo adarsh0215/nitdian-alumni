@@ -2,6 +2,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { usePathname } from "next/navigation";
 import { toast } from "sonner";
@@ -31,6 +32,7 @@ type Me = {
 
 export default function Navbar() {
   const pathname = usePathname();
+  // if (pathname?.startsWith("/auth/")) return null;
   const supabase = useMemo(() => supabaseBrowser(), []);
 
   const [me, setMe] = useState<Me | null>(null);
@@ -41,7 +43,8 @@ export default function Navbar() {
   const { theme, setTheme, systemTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
-  const isDark = mounted && (theme === "system" ? systemTheme : theme) === "dark";
+  const isDark =
+    mounted && (theme === "system" ? systemTheme : theme) === "dark";
   const toggleTheme = () => setTheme(isDark ? "light" : "dark");
 
   // ---------- profile load ----------
@@ -87,11 +90,13 @@ export default function Navbar() {
   // ---------- helpers ----------
   const initials = useMemo(() => {
     const base = (me?.full_name || me?.email || "U").trim();
-    return base
-      .split(/\s+/)
-      .slice(0, 2)
-      .map((s) => s[0]?.toUpperCase() ?? "")
-      .join("") || "U";
+    return (
+      base
+        .split(/\s+/)
+        .slice(0, 2)
+        .map((s) => s[0]?.toUpperCase() ?? "")
+        .join("") || "U"
+    );
   }, [me]);
 
   const isActive = useCallback(
@@ -125,11 +130,28 @@ export default function Navbar() {
     <header className="sticky top-0 z-40 w-full border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-3 md:px-4">
         {/* Brand */}
-        <Link href="/" aria-label="NITDIAN home" className="flex items-center gap-2">
-          <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
-            <GraduationCap className="h-5 w-5" aria-hidden />
+        <Link
+          href="/"
+          aria-label="NITDIAN home"
+          className="flex items-center gap-2"
+        >
+          <span className="inline-flex h-12 w-12 items-center justify-center rounded-lg  text-primary">
+            <Image
+              src="/images/image.png"
+              alt="NIT Durgapur Alumni logo"
+              width={40}
+              height={40}
+              className="object-contain"
+            />
           </span>
-          <span className="text-base font-semibold tracking-tight">NITDIAN</span>
+          <div className="flex flex-col leading-tight">
+            <span className="text-base  font-semibold tracking-tight">
+              NIT Durgapur
+            </span>
+            <span className="text-sm font-medium text-muted-foreground tracking-tight">
+              International Alumni Network
+            </span>
+          </div>
         </Link>
 
         {/* Desktop nav */}
@@ -157,7 +179,11 @@ export default function Navbar() {
             onClick={toggleTheme}
           >
             {mounted ? (
-              isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />
+              isDark ? (
+                <Sun className="h-5 w-5" />
+              ) : (
+                <Moon className="h-5 w-5" />
+              )
             ) : (
               <span className="h-5 w-5" />
             )}
@@ -168,7 +194,9 @@ export default function Navbar() {
             {!loading && !me && (
               <>
                 <Link href="/auth/login">
-                  <Button variant="ghost" size="sm">Login</Button>
+                  <Button variant="ghost" size="sm">
+                    Login
+                  </Button>
                 </Link>
                 <Link href="/auth/signup">
                   <Button size="sm">Sign Up</Button>
@@ -185,9 +213,14 @@ export default function Navbar() {
                   >
                     <Avatar className="h-8 w-8">
                       {me.avatar_url ? (
-                        <AvatarImage src={me.avatar_url} alt={me.full_name ?? "Avatar"} />
+                        <AvatarImage
+                          src={me.avatar_url}
+                          alt={me.full_name ?? "Avatar"}
+                        />
                       ) : (
-                        <AvatarFallback className="text-[11px]">{initials}</AvatarFallback>
+                        <AvatarFallback className="text-[11px]">
+                          {initials}
+                        </AvatarFallback>
                       )}
                     </Avatar>
                     <span className="hidden max-w-[160px] truncate text-sm md:block">
@@ -201,15 +234,26 @@ export default function Navbar() {
                     {me.full_name ?? me.email ?? "User"}
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild><Link href="/dashboard">Dashboard</Link></DropdownMenuItem>
-                  <DropdownMenuItem asChild><Link href="/onboarding">Edit profile</Link></DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/dashboard">Dashboard</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/onboarding">Edit profile</Link>
+                  </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={signOut} className="text-destructive">Sign out</DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={signOut}
+                    className="text-destructive"
+                  >
+                    Sign out
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             )}
 
-            {loading && <div className="h-8 w-[160px] animate-pulse rounded-md bg-muted" />}
+            {loading && (
+              <div className="h-8 w-[160px] animate-pulse rounded-md bg-muted" />
+            )}
           </div>
 
           {/* Mobile hamburger */}
@@ -252,20 +296,32 @@ export default function Navbar() {
               {!loading && !me && (
                 <>
                   <Link href="/auth/login" onClick={() => setOpen(false)}>
-                    <Button variant="ghost" size="sm" className="w-full">Login</Button>
+                    <Button variant="ghost" size="sm" className="w-full">
+                      Login
+                    </Button>
                   </Link>
                   <Link href="/auth/signup" onClick={() => setOpen(false)}>
-                    <Button size="sm" className="w-full">Sign Up</Button>
+                    <Button size="sm" className="w-full">
+                      Sign Up
+                    </Button>
                   </Link>
                 </>
               )}
 
               {!loading && me && (
                 <>
-                  <Link href="/dashboard" className={linkCls("/dashboard")} onClick={() => setOpen(false)}>
+                  <Link
+                    href="/dashboard"
+                    className={linkCls("/dashboard")}
+                    onClick={() => setOpen(false)}
+                  >
                     Dashboard
                   </Link>
-                  <Link href="/onboarding" className={linkCls("/onboarding")} onClick={() => setOpen(false)}>
+                  <Link
+                    href="/onboarding"
+                    className={linkCls("/onboarding")}
+                    onClick={() => setOpen(false)}
+                  >
                     Edit profile
                   </Link>
                   <Button variant="destructive" size="sm" onClick={signOut}>
@@ -274,7 +330,9 @@ export default function Navbar() {
                 </>
               )}
 
-              {loading && <div className="h-8 w-full animate-pulse rounded-md bg-muted" />}
+              {loading && (
+                <div className="h-8 w-full animate-pulse rounded-md bg-muted" />
+              )}
             </div>
           </div>
         </div>

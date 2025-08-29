@@ -84,7 +84,7 @@ export default function Hero({
               className="text-balance font-semibold leading-tight tracking-tight text-white
                          [font-size:clamp(2.35rem,2.6vw+1.6rem,4.3rem)]"
             >
-              Connect. Collaborate. <span className="text-primary">Contribute.</span>
+              Connect. Collaborate. <span className="">Contribute.</span>
             </motion.h1>
 
             <motion.p
@@ -92,7 +92,7 @@ export default function Hero({
               className="mx-auto mt-4 max-w-prose text-white/85
                          [font-size:clamp(1rem,0.45vw+0.9rem,1.2rem)]"
             >
-              The official NIT Durgapur International Alumni Network — Delhi Chapter.
+              The official NIT Durgapur International Alumni Network.
             </motion.p>
 
             <motion.div variants={fade} className="mt-8 flex justify-center">
