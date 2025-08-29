@@ -82,5 +82,14 @@ export async function GET(req: NextRequest) {
   }
 
   // No recognizable params → just go to next safely
+  // in app/auth/callback/route.ts after you have a session:
+const { data: { user } } = await supabase.auth.getUser();
+if (user) {
+  await supabase.from("profiles").upsert(
+    { id: user.id, email: user.email ?? "", onboarded: false, is_public: false, is_approved: false },
+    { onConflict: "id" }
+  );
+}
+
   return res;
 }

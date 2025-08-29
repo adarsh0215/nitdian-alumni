@@ -1,3 +1,6 @@
+// Ensure SSR (auth-sensitive)
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 // app/dashboard/page.tsx
 import { redirect } from "next/navigation";
 import { supabaseServer } from "@/lib/supabase/server";
@@ -7,8 +10,10 @@ export const metadata = {
   title: "Dashboard • AlumniNet",
 };
 
-// Ensure SSR (auth-sensitive)
-export const dynamic = "force-dynamic";
+
+
+
+
 
 export default async function DashboardPage() {
   const supabase = await supabaseServer();
